@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<script src="https://momentjs.com/downloads/moment.js"></script>
+ 
+<title>Stocks App</title>
+ 
+</head>
+<body>
+
+
+<div class="container">
+  	
+  	<h2>Stocks App</h2>
+
+    <input id="search" type="text" placeholder="Search..">
+  
+	<table class="table">
+	  <thead>
+	    <tr>
+	      <th scope="col">Ticker</th>
+	      <th scope="col">Price</th>
+	      <th scope="col">Last Update</th>
+	    </tr>
+	  </thead>
+	  <tbody id="ticker">
+	    
+	  </tbody>
+	</table>
+</div>
+
+</body>
+</html>​
+
+<style type="text/css">
+	
+	.stock-red {
+		background: red;
+		color: #fff;
+	}
+	.stock-green {
+		background: green;
+		color: #fff;
+	}
+
+  .stockName{
+
+    text-transform: uppercase;
+  }
+</style>
+
+<script type="text/javascript">
+	
+
+	$(document).ready(function() {
+
+  	if(!("WebSocket" in window)){
+
+	 		alert('Browser does not support WebSockets');
+  	}else{
+
+      connect();
+
+      function connect(){
+          var socket;
+          var host = "ws://stocks.mnet.website";
+          
+          try{
+              var socket = new WebSocket(host);
+
+              console.log('Socket Status: '+socket.readyState);
+
+              socket.onopen = function(){
+             	 console.log('Socket Status: '+socket.readyState+' (open)');
+              }
+
+              socket.onmessage = function(res){
+
+              	var stocks = JSON.parse(res.data);
+
+              	updateTicker(stocks);
+              }
+
+              socket.onclose = function(){
+              	console.log('Socket Status: '+socket.readyState+' (Closed)');
+              }
+
+          } catch(exception){
+             console.log('Error'+exception);
+          }
+
+      }//End connect
+
+      function updateTicker(stocks){
+
+            var $ticker = $('tbody#ticker');
+
+            $.each(stocks,function(key,stock){
+
+              //console.log(stock);
+
+              var stockName, 
+                stockValue,
+                oldStockName,
+                oldStockValue,
+                stockHtml;
+
+
+              stockName = stock[0];
+              stockValue = parseFloat(stock[1]);
+
+              
+              stockHtml = makeTr(stockName,stockValue);
+
+              //check if stock entry exists
+              if($('#'+stockName).length == 0){
+
+                //add new row
+                $ticker.append(stockHtml);
+              }else{
+
+                //update existing
+                $oldStockValue = $('#'+stockName).find('.stockValue');
+                oldStockValue = parseFloat($oldStockValue.text());
+
+                $oldStockValue.text(stockValue);
+
+                //stock rise
+                if(stockValue > oldStockValue){
+
+                  $('#'+stockName).attr('class','stock-green');
+                }
+
+                //stock fall
+                if(stockValue < oldStockValue){
+
+                  $('#'+stockName).attr('class','stock-red');
+                }
+
+                $('#'+stockName).find('.stockLastUpdated').text(moment().startOf('second').fromNow());
+              }
+              
+              
+          });
+        }//updateTicker 
+
+        function makeTr(stockName,stockValue){
+
+          var stockHtml;
+
+          stockHtml = "<tr id="+stockName+">";
+
+          stockHtml += "<td class='stockName'>";
+          stockHtml += stockName;
+          stockHtml += "</td>";
+
+          stockHtml += "<td class='stockValue'>";
+          stockHtml += stockValue;
+          stockHtml += "</td>";
+
+          stockHtml += "<td class='stockLastUpdated'>";
+          stockHtml += moment().startOf('second').fromNow();
+          stockHtml += "</td>";
+
+          stockHtml += "</tr>";
+
+          return stockHtml;
+        }
+
+  }//End else
+
+  $("#search").on("keyup", function() {
+    var value = $(this).val().toLowerCase();
+    $("#ticker tr").filter(function() {
+      $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+    });
+  });
+
+});
+</script>
